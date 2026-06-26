@@ -1,19 +1,16 @@
-import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+import { Injectable, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 
-export const GetUser = createParamDecorator(
-  (data: string | undefined, ctx: ExecutionContext) => {
-    const request = ctx.switchToHttp().getRequest();
-    const user = request.user;
-    
-    if (!user) {
-      return null;
+@Injectable()
+export class JwtAuthGuard extends AuthGuard('jwt') {
+  canActivate(context: ExecutionContext) {
+    return super.canActivate(context);
+  }
+
+  handleRequest(err: any, user: any, info: any) {
+    if (err || !user) {
+      throw err || new UnauthorizedException('Invalid or expired token');
     }
-
-    // If data is provided (e.g., @GetUser('id')), return specific field
-    if (data) {
-      return user[data];
-    }
-
     return user;
-  },
-);
+  }
+}

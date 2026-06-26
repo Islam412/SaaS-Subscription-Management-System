@@ -9,8 +9,10 @@ import { TenantModule } from './modules/tenant/tenant.module';
 import { UsersModule } from './modules/users/users.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { PlansModule } from './modules/plans/plans.module';
+import { PlansModule } from './modules/plans/plans.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { CustomersModule } from './modules/customers/customers.module';
 
 @Module({
   imports: [
