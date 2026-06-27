@@ -1,5 +1,5 @@
-import { Controller, Get, Res } from '@nestjs/common';
-import type { Response } from 'express';
+import { Controller, Get, Res, Req } from '@nestjs/common';
+import type { Response, Request } from 'express';
 import { AppService } from './app.service';
 
 @Controller()
@@ -7,8 +7,13 @@ export class AppController {
   constructor(private readonly appService: AppService) {}
 
   @Get()
-  async getDashboard(@Res() res: Response) {
+  async getDashboard(@Res() res: Response, @Req() req: Request) {
     const data = await this.appService.getDashboard();
+
+    // Return JSON if requested (for testing or API calls)
+    if (req.headers.accept?.includes('application/json')) {
+      return res.json(data);
+    }
 
     res.send(`
       <!DOCTYPE html>
@@ -31,9 +36,16 @@ export class AppController {
               --signal-soft: #E4F4EE;
               --amber: #B5841F;
               --amber-soft: #FBF1DD;
+              --violet: #6D5BD0;
+              --violet-soft: #ECE9FB;
+              --blue: #3568D4;
+              --blue-soft: #E8EEFC;
+              --rose: #C2486B;
+              --rose-soft: #FBEAEF;
               --mono: 'IBM Plex Mono', monospace;
               --display: 'Space Grotesk', sans-serif;
               --body: 'Inter', -apple-system, sans-serif;
+              --emoji: 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
             }
             * { margin: 0; padding: 0; box-sizing: border-box; }
             html { -webkit-font-smoothing: antialiased; }
@@ -50,24 +62,29 @@ export class AppController {
               padding: 32px 24px 64px;
             }
             .dashboard { max-width: 1280px; margin: 0 auto; }
+            @keyframes riseIn {
+              from { opacity: 0; transform: translateY(10px); }
+              to { opacity: 1; transform: translateY(0); }
+            }
 
             /* ---------- Masthead ---------- */
             .masthead {
               background: var(--paper-raised);
               border: 1px solid var(--line-strong);
-              border-radius: 4px;
-              padding: 28px 32px;
-              margin-bottom: 28px;
+              border-radius: 14px;
+              padding: 30px 34px;
+              margin-bottom: 24px;
               position: relative;
               overflow: hidden;
+              box-shadow: 0 4px 24px rgba(16, 23, 42, 0.06);
+              animation: riseIn 0.5s ease both;
             }
             .masthead::before {
               content: '';
               position: absolute;
               top: 0; left: 0; right: 0;
               height: 4px;
-              background: repeating-linear-gradient(90deg, var(--ink) 0 10px, transparent 10px 16px);
-              opacity: 0.85;
+              background: linear-gradient(90deg, var(--ink) 0%, var(--blue) 35%, var(--violet) 65%, var(--signal) 100%);
             }
             .masthead-row {
               display: flex;
@@ -86,9 +103,9 @@ export class AppController {
             }
             .masthead h1 {
               font-family: var(--display);
-              font-size: 1.9rem;
+              font-size: 2.1rem;
               font-weight: 700;
-              letter-spacing: -0.01em;
+              letter-spacing: -0.015em;
               color: var(--ink);
             }
             .masthead-meta {
@@ -107,41 +124,53 @@ export class AppController {
               box-shadow: 0 0 0 3px var(--signal-soft);
             }
 
-            /* ---------- Ledger stat tape ---------- */
-            .ledger-tape {
+            /* ---------- Stat cards ---------- */
+            .stats-grid {
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+              gap: 14px;
+              margin-bottom: 24px;
+            }
+            .stat-card {
               background: var(--paper-raised);
               border: 1px solid var(--line-strong);
-              border-radius: 4px;
-              margin-bottom: 28px;
-              overflow-x: auto;
+              border-radius: 12px;
+              padding: 18px 20px;
+              box-shadow: 0 2px 10px rgba(16, 23, 42, 0.05);
+              transition: transform 0.2s ease, box-shadow 0.2s ease;
+              animation: riseIn 0.5s ease both;
             }
-            .ledger-row {
-              display: grid;
-              grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-              border-bottom: 1px solid var(--line);
+            .stat-card:hover {
+              transform: translateY(-3px);
+              box-shadow: 0 10px 28px rgba(16, 23, 42, 0.10);
+              border-color: var(--chip);
             }
-            .ledger-row:last-child { border-bottom: none; }
-            .ledger-cell {
-              padding: 16px 20px;
-              border-right: 1px solid var(--line);
-              position: relative;
-            }
-            .ledger-cell:last-child { border-right: none; }
-            .ledger-cell .label {
-              font-family: var(--mono);
-              font-size: 0.65rem;
-              letter-spacing: 0.08em;
-              text-transform: uppercase;
-              color: var(--ink-soft);
+            .stat-chip {
+              width: 30px; height: 30px;
+              border-radius: 9px;
               display: flex;
               align-items: center;
-              gap: 6px;
-              margin-bottom: 8px;
+              justify-content: center;
+              font-family: var(--emoji);
+              font-size: 0.95rem;
+              background: var(--chip-soft);
+              margin-bottom: 12px;
             }
-            .ledger-cell .value {
+            .stat-card .label {
               font-family: var(--mono);
-              font-size: 1.7rem;
-              font-weight: 500;
+              font-size: 0.64rem;
+              letter-spacing: 0.07em;
+              text-transform: uppercase;
+              color: var(--ink-soft);
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              margin-bottom: 6px;
+            }
+            .stat-card .value {
+              font-family: var(--mono);
+              font-size: 1.75rem;
+              font-weight: 600;
               color: var(--ink);
               letter-spacing: -0.02em;
             }
@@ -150,14 +179,17 @@ export class AppController {
             .panels-row {
               display: grid;
               grid-template-columns: 1.6fr 1fr;
-              gap: 20px;
-              margin-bottom: 28px;
+              gap: 18px;
+              margin-bottom: 24px;
             }
             .panel {
               background: var(--paper-raised);
               border: 1px solid var(--line-strong);
-              border-radius: 4px;
-              padding: 24px 28px;
+              border-radius: 14px;
+              padding: 26px 28px;
+              box-shadow: 0 2px 10px rgba(16, 23, 42, 0.05);
+              animation: riseIn 0.5s ease both;
+              animation-delay: 0.1s;
             }
             .panel-head {
               display: flex;
@@ -182,31 +214,39 @@ export class AppController {
             /* Distribution rows (replacing bar chart with ledger-style horizontal bars) */
             .dist-row {
               display: grid;
-              grid-template-columns: 110px 1fr 56px;
+              grid-template-columns: 150px 1fr 56px;
               align-items: center;
-              gap: 12px;
-              padding: 9px 0;
+              gap: 14px;
+              padding: 10px 0;
               border-bottom: 1px solid var(--line);
             }
             .dist-row:last-child { border-bottom: none; }
             .dist-label {
               font-family: var(--mono);
-              font-size: 0.72rem;
+              font-size: 0.7rem;
               color: var(--ink-soft);
               text-transform: uppercase;
-              letter-spacing: 0.04em;
+              letter-spacing: 0.03em;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              display: flex;
+              align-items: center;
+              gap: 6px;
             }
+            .dist-label .ic { font-family: var(--emoji); flex-shrink: 0; }
             .dist-track {
-              height: 8px;
+              height: 9px;
               background: var(--paper);
               border: 1px solid var(--line);
-              border-radius: 2px;
+              border-radius: 5px;
               overflow: hidden;
             }
             .dist-fill {
               height: 100%;
-              background: var(--ink);
+              background: linear-gradient(90deg, var(--ink), var(--blue));
               width: 0%;
+              border-radius: 5px;
               transition: width 0.9s cubic-bezier(0.16, 1, 0.3, 1);
             }
             .dist-val {
@@ -220,11 +260,14 @@ export class AppController {
             /* Summary panel */
             .summary-total {
               font-family: var(--mono);
-              font-size: 2.6rem;
-              font-weight: 600;
-              color: var(--ink);
+              font-size: 2.8rem;
+              font-weight: 700;
               letter-spacing: -0.02em;
               line-height: 1;
+              background: linear-gradient(135deg, var(--ink), var(--blue));
+              -webkit-background-clip: text;
+              background-clip: text;
+              color: transparent;
             }
             .summary-caption {
               font-family: var(--mono);
@@ -250,23 +293,30 @@ export class AppController {
             .activity-grid {
               display: grid;
               grid-template-columns: 1fr 1fr;
-              gap: 20px;
-              margin-bottom: 28px;
+              gap: 18px;
+              margin-bottom: 24px;
             }
             .activity-card {
               background: var(--paper-raised);
               border: 1px solid var(--line-strong);
-              border-radius: 4px;
+              border-radius: 14px;
               padding: 24px 28px;
+              box-shadow: 0 2px 10px rgba(16, 23, 42, 0.05);
+              animation: riseIn 0.5s ease both;
+              animation-delay: 0.15s;
             }
             .activity-card .panel-head h3 { font-size: 0.95rem; }
             .activity-item {
               display: flex;
               justify-content: space-between;
               align-items: center;
-              padding: 12px 0;
+              padding: 12px 4px;
+              margin: 0 -4px;
               border-bottom: 1px solid var(--line);
+              border-radius: 3px;
+              transition: background 0.15s ease;
             }
+            .activity-item:hover { background: var(--paper); }
             .activity-item:last-child { border-bottom: none; }
             .activity-name {
               color: var(--ink);
@@ -285,8 +335,8 @@ export class AppController {
               white-space: nowrap;
             }
             .role-badge {
-              padding: 2px 9px;
-              border-radius: 3px;
+              padding: 3px 10px;
+              border-radius: 6px;
               font-family: var(--mono);
               font-size: 0.62rem;
               font-weight: 600;
@@ -307,9 +357,10 @@ export class AppController {
             .links-panel {
               background: var(--paper-raised);
               border: 1px solid var(--line-strong);
-              border-radius: 4px;
+              border-radius: 14px;
               padding: 24px 28px;
-              margin-bottom: 28px;
+              margin-bottom: 24px;
+              box-shadow: 0 2px 10px rgba(16, 23, 42, 0.05);
             }
             .links {
               display: flex;
@@ -320,28 +371,30 @@ export class AppController {
               display: inline-flex;
               align-items: center;
               gap: 9px;
-              padding: 11px 20px;
-              border-radius: 3px;
+              padding: 11px 22px;
+              border-radius: 9px;
               text-decoration: none;
               font-weight: 500;
               font-size: 0.82rem;
               font-family: var(--body);
-              transition: all 0.15s ease;
+              transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, color 0.15s ease;
               border: 1px solid var(--ink);
               cursor: pointer;
               color: var(--ink);
               background: transparent;
             }
-            .btn:hover { background: var(--ink); color: var(--paper-raised); }
+            .btn:hover { background: var(--ink); color: var(--paper-raised); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(16, 23, 42, 0.18); }
             .btn-primary { background: var(--ink); color: var(--paper-raised); }
             .btn-primary:hover { background: #000; }
             .btn-signal { border-color: var(--signal); color: var(--signal); }
-            .btn-signal:hover { background: var(--signal); color: #fff; }
+            .btn-signal:hover { background: var(--signal); color: #fff; box-shadow: 0 8px 20px rgba(15, 157, 120, 0.25); }
 
             /* ---------- Footer ---------- */
             .footer {
               text-align: center;
-              padding: 24px 0 4px;
+              padding: 28px 0 4px;
+              margin-top: 8px;
+              border-top: 1px solid var(--line);
               color: var(--ink-soft);
               font-size: 0.75rem;
               font-family: var(--mono);
@@ -373,16 +426,15 @@ export class AppController {
               </div>
             </div>
 
-            <!-- Stat tape -->
-            <div class="ledger-tape">
-              <div class="ledger-row">
-                ${Object.entries(data.database.stats).map(([key, value]) => `
-                  <div class="ledger-cell">
-                    <div class="label">${getIcon(key)} ${formatLabel(key)}</div>
-                    <div class="value">${String(value).padStart(2, '0')}</div>
-                  </div>
-                `).join('')}
-              </div>
+            <!-- Stat cards -->
+            <div class="stats-grid">
+              ${Object.entries(data.database.stats).map(([key, value], i) => `
+                <div class="stat-card" style="--chip:${getAccent(key)};--chip-soft:${getAccentSoft(key)};animation-delay:${i * 0.05}s">
+                  <div class="stat-chip">${getIcon(key)}</div>
+                  <div class="label">${formatLabel(key)}</div>
+                  <div class="value">${String(value).padStart(2, '0')}</div>
+                </div>
+              `).join('')}
             </div>
 
             <!-- Distribution + Summary -->
@@ -472,6 +524,38 @@ export class AppController {
 }
 
 // ---------- Helper functions ----------
+function getAccent(key: string) {
+  const colors: Record<string, string> = {
+    tenants: 'var(--blue)',
+    users: 'var(--violet)',
+    customers: 'var(--rose)',
+    subscriptionPlans: 'var(--amber)',
+    subscriptions: 'var(--signal)',
+    invoices: 'var(--blue)',
+    payments: 'var(--rose)',
+    accounts: 'var(--violet)',
+    journalEntries: 'var(--amber)',
+    journalLines: 'var(--signal)',
+  };
+  return colors[key] || 'var(--ink)';
+}
+
+function getAccentSoft(key: string) {
+  const colors: Record<string, string> = {
+    tenants: 'var(--blue-soft)',
+    users: 'var(--violet-soft)',
+    customers: 'var(--rose-soft)',
+    subscriptionPlans: 'var(--amber-soft)',
+    subscriptions: 'var(--signal-soft)',
+    invoices: 'var(--blue-soft)',
+    payments: 'var(--rose-soft)',
+    accounts: 'var(--violet-soft)',
+    journalEntries: 'var(--amber-soft)',
+    journalLines: 'var(--signal-soft)',
+  };
+  return colors[key] || 'var(--paper)';
+}
+
 function getIcon(key: string) {
   const icons: Record<string, string> = {
     tenants: '🏢',
@@ -512,7 +596,7 @@ function generateDistribution(stats: Record<string, number>) {
       const pct = Math.max((value / max) * 100, 3);
       return `
         <div class="dist-row">
-          <div class="dist-label">${getIcon(key)} ${formatLabel(key)}</div>
+          <div class="dist-label"><span class="ic">${getIcon(key)}</span> ${formatLabel(key)}</div>
           <div class="dist-track"><div class="dist-fill" data-width="${pct}"></div></div>
           <div class="dist-val">${value}</div>
         </div>

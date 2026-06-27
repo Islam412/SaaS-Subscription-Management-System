@@ -22,11 +22,12 @@ describe('AppController (e2e)', () => {
     await app.close();
   });
 
-  it('GET / should return Hello World', async () => {
+  it('GET / should return dashboard', async () => {
     const response = await request(app.getHttpServer())
       .get('/')
       .expect(200);
-    expect(response.text).toBe('Hello World!');
+    expect(response.text).toContain('SaaS Subscription Management System');
+    expect(response.text).toContain('Ledger Console');
   });
 
   it('POST /auth/register should register a new tenant', async () => {
